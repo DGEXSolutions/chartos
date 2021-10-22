@@ -4,7 +4,7 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    config_path: str = "layer.yml"
+    config_path: str = "examples/layer.yml"
     psql_dsn: str
     psql_user: Optional[str] = None
     psql_password: Optional[str] = None

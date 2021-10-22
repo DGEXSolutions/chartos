@@ -5,8 +5,11 @@ from abc import ABC, abstractmethod
 from typing import Optional, List, Iterator, TypeVar, Dict, Type, Literal, Union, ClassVar
 from enum import IntEnum, auto
 from dataclasses import dataclass, field
-from chartos.utils import PeekableIterator
+from chartos.utils import PeekableIterator, ValueDependable
 from chartos.serialized_config import SerializedConfig, SerializedLayer, SerializedView, SerializedField
+
+
+config = ValueDependable("config")
 
 
 class FieldType(ABC):

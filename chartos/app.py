@@ -6,7 +6,7 @@ from .config import Config
 from .serialized_config import SerializedConfig
 from .psql import PSQLPool
 from typing import Optional
-
+from .config import config
 
 def get_config(settings: Settings) -> Config:
     with open(settings.config_path) as f:
@@ -16,11 +16,9 @@ def get_config(settings: Settings) -> Config:
 
 
 def make_app(settings: Settings) -> FastAPI:
-    # TODO: inject into views which require it
-    # config = get_config()
-
     app = FastAPI()
     app.include_router(view_router)
+    config.setup(app, get_config(settings))
     PSQLPool.setup(app, settings.psql_settings())
     return app
 
