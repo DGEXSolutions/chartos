@@ -9,7 +9,7 @@ from chartos.utils import PeekableIterator, ValueDependable
 from chartos.serialized_config import SerializedConfig, SerializedLayer, SerializedView, SerializedField
 
 
-config = ValueDependable("config")
+get_config = ValueDependable("get_config")
 
 
 class FieldType(ABC):
@@ -71,6 +71,7 @@ class Layer:
     versioned: bool
     fields: Dict[str, Field]
     views: Dict[str, View]
+    description: Optional[str] = None
 
     @staticmethod
     def parse(raw_config: SerializedLayer) -> "Layer":
@@ -83,6 +84,7 @@ class Layer:
             raw_config.versioned,
             fields,
             views,
+            description=raw_config.description,
         )
 
 

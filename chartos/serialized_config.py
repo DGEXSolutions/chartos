@@ -22,6 +22,7 @@ class SerializedLayer(BaseModel):
     versioned: bool
     fields: List[SerializedField]
     views: List[SerializedView]
+    description: Optional[str] = None
 
 
 class SerializedConfig(BaseModel):
