@@ -4,7 +4,7 @@ from .views import router as view_router
 from .settings import Settings, get_settings
 from .config import Config
 from .serialized_config import SerializedConfig
-from .psql import setup_psql
+from .psql import PSQLPool
 from typing import Optional
 
 
@@ -17,11 +17,11 @@ def get_config(settings: Settings) -> Config:
 
 def make_app(settings: Settings) -> FastAPI:
     # TODO: inject into views which require it
-    config = get_config()
+    # config = get_config()
 
     app = FastAPI()
     app.include_router(view_router)
-    setup_psql(app, settings.psql_settings())
+    PSQLPool.setup(app, settings.psql_settings())
     return app
 
 
