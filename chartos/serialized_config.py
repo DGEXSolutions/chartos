@@ -1,38 +1,30 @@
-from dataclasses import dataclass, field
-from dataclasses_json import dataclass_json
+from pydantic import BaseModel
 from typing import List, Optional
 
 
-@dataclass_json
-@dataclass
-class SerializedField:
+class SerializedField(BaseModel):
     name: str
     description: str
     type: str
 
 
-@dataclass_json
-@dataclass
-class SerializedView:
+class SerializedView(BaseModel):
     name: str
     on_field: str
-    fields: List[str]
+    fields: Optional[List[str]] = None
+    exclude_fields: Optional[List[str]] = None
     # defaults to 1 hour
     cache_duration: Optional[int] = None
 
 
-@dataclass_json
-@dataclass
-class SerializedLayer:
+class SerializedLayer(BaseModel):
     name: str
-    versionned: bool
+    versioned: bool
     fields: List[SerializedField]
     views: List[SerializedView]
 
 
-@dataclass_json
-@dataclass
-class SerializedConfig:
+class SerializedConfig(BaseModel):
     name: str
     description: str
     layers: List[SerializedLayer]

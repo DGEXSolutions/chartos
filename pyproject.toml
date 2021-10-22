@@ -8,7 +8,6 @@ authors = ["DGEX Solutions <contact@dgexsol.fr>"]
 # base
 python = "^3.8"
 fastapi = "^0"
-dataclasses-json = "^0"
 aredis = "^1"
 asyncpg = { version = "^0" }
 uvicorn = { version = "^0", extras = ["standard"] }
@@ -24,6 +23,7 @@ production = [
 ]
 
 [tool.poetry.dev-dependencies]
+mypy = "*"
 # ikp3db = "1.4.1"
 # coverage = "5.5"
 # black = "21.9b0"

@@ -1,3 +1,4 @@
+import yaml
 import string
 import typing
 from abc import ABC, abstractmethod
@@ -38,9 +39,18 @@ class View:
     cache_duration: int
 
     @staticmethod
-    def parse(fields: Dict[str, Field], raw_config: SerializedView) -> "Field":
-        resolved_on_field = fields[raw_config.on_field]
-        resolved_fields = [fields[name] for name in raw_config.fields]
+    def parse(layer_fields: Dict[str, Field], raw_config: SerializedView) -> "View":
+        resolved_on_field = layer_fields[raw_config.on_field]
+        view_fields = (
+            raw_config.fields
+            if raw_config.fields is not None
+            else list(layer_fields.keys())
+        )
+        if raw_config.exclude_fields is not None:
+            for excluded_field in raw_config.exclude_fields:
+                view_fields.remove(excluded_field)
+
+        resolved_fields = [layer_fields[name] for name in view_fields]
         cache_duration = raw_config.cache_duration
         if cache_duration is None:
             cache_duration = 3600
@@ -55,7 +65,7 @@ class View:
 @dataclass
 class Layer:
     name: str
-    versionned: bool
+    versioned: bool
     fields: Dict[str, Field]
     views: Dict[str, View]
 
@@ -67,7 +77,7 @@ class Layer:
         views = {view.name: view for view in parsed_views}
         return Layer(
             raw_config.name,
-            raw_config.versionned,
+            raw_config.versioned,
             fields,
             views,
         )
@@ -389,13 +399,3 @@ class TypeParser:
             else:
                 raise SyntaxError("unexpected argument value token")
         return field_type(**args)  # type: ignore
-
-
-for test_type in [
-        "array(of=int)",
-        "array(of=char(max_len=10))",
-]:
-    print(">> testing", test_type)
-    field_type = TypeParser.parse_str(test_type)
-    print(field_type)
-    print(field_type.pg_type)

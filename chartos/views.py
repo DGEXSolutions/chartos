@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends
-from .appstate import AppState, get_appstate
-
+from dataclasses import asdict as dataclass_as_dict
+from .psql import get_psql
 
 router = APIRouter()
 
 
 @router.get("/info")
-async def info(app_state: AppState = Depends(get_appstate)):
+async def info(psql = Depends(get_psql)):
     return {
-        "app_name": app_state.settings.app_name,
+        "app_name": dataclass_as_dict(app_state.config)
     }
