@@ -1,9 +1,7 @@
 import asyncpg
-from typing import cast
 from fastapi import FastAPI
-
-from fastapi.dependencies.utils import is_gen_callable, is_async_gen_callable
 from .utils import AsyncProcess, process_dependable
+
 
 class PSQLPool(AsyncProcess):
     def __init__(self, settings):
