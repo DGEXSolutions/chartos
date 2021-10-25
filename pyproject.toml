@@ -8,7 +8,7 @@ authors = ["DGEX Solutions <contact@dgexsol.fr>"]
 # base
 python = "^3.8"
 fastapi = "^0"
-aredis = "^1"
+aioredis = "^2"
 asyncpg = { version = "^0" }
 uvicorn = { version = "^0", extras = ["standard"] }
 

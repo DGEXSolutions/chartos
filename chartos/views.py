@@ -4,14 +4,19 @@ from fastapi import APIRouter, Depends
 from dataclasses import asdict as dataclass_as_dict
 from .psql import PSQLPool
 from .config import Config, get_config
+from .redis import RedisPool
 
 
 router = APIRouter()
 
 
 @router.get("/health")
-async def health(psql=Depends(PSQLPool.get)):
+async def health(
+        psql=Depends(PSQLPool.get),
+        redis=Depends(RedisPool.get),
+):
     await psql.execute("select 1;")
+    await redis.ping()
     return ""
 
 

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     psql_dsn: str
     psql_user: Optional[str] = None
     psql_password: Optional[str] = None
+    redis_url: str
 
     def psql_settings(self):
         return {
