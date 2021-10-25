@@ -1,7 +1,7 @@
 import yaml
 from fastapi import FastAPI, Depends
 from .views import router as view_router
-from .settings import Settings, get_settings
+from .settings import Settings, get_settings, get_env_settings
 from .config import Config, get_config
 from .serialized_config import SerializedConfig
 from .psql import PSQLPool
@@ -20,9 +20,10 @@ def make_app(settings: Settings) -> FastAPI:
     app = FastAPI()
     app.include_router(view_router)
     get_config.setup(app, read_config(settings))
+    get_settings.setup(app, settings)
     PSQLPool.setup(app, settings.psql_settings())
     RedisPool.setup(app, settings.redis_url)
     return app
 
 
-app = make_app(get_settings())
+app = make_app(get_env_settings())

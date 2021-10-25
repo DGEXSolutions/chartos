@@ -1,10 +1,19 @@
 from typing import Optional
 from pydantic import BaseSettings
 from functools import lru_cache
+from chartos.utils import ValueDependable
 
 
 class Settings(BaseSettings):
     config_path: str = "examples/layer.yml"
+
+    max_zoom: int = 18
+
+    # those are needed to build mvt layer metadata
+    protocol: str
+    root_url: str
+
+    # postgres://user:password@host:port/database?option=value
     psql_dsn: str
     psql_user: Optional[str] = None
     psql_password: Optional[str] = None
@@ -18,6 +27,9 @@ class Settings(BaseSettings):
         }
 
 
+get_settings = ValueDependable("get_settings")
+
+
 @lru_cache()
-def get_settings():
+def get_env_settings():
     return Settings()

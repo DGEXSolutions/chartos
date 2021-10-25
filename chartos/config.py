@@ -69,9 +69,11 @@ class View:
 class Layer:
     name: str
     versioned: bool
+    id_field: Field
     fields: Dict[str, Field]
     views: Dict[str, View]
     description: Optional[str] = None
+    attribution: Optional[str] = None
 
     @staticmethod
     def parse(raw_config: SerializedLayer) -> "Layer":
@@ -79,12 +81,15 @@ class Layer:
         fields = {field.name: field for field in parsed_fields}
         parsed_views = (View.parse(fields, view) for view in raw_config.views)
         views = {view.name: view for view in parsed_views}
+        id_field = fields[raw_config.id_field_name]
         return Layer(
             raw_config.name,
             raw_config.versioned,
+            id_field,
             fields,
             views,
             description=raw_config.description,
+            attribution=raw_config.attribution,
         )
 
 

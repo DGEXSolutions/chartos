@@ -20,9 +20,11 @@ class SerializedView(BaseModel):
 class SerializedLayer(BaseModel):
     name: str
     versioned: bool
+    id_field_name: str  # this is returned as mvt metadata
     fields: List[SerializedField]
     views: List[SerializedView]
     description: Optional[str] = None
+    attribution: Optional[str] = None
 
 
 class SerializedConfig(BaseModel):
