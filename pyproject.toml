@@ -11,6 +11,7 @@ fastapi = "^0"
 aioredis = "^2"
 asyncpg = { version = "^0" }
 uvicorn = { version = "^0", extras = ["standard"] }
+shapely = "^1"
 
 # production
 gunicorn = {version = "20.1.0", optional = true}
