@@ -5,6 +5,7 @@ from .settings import Settings, get_settings, get_env_settings
 from .config import Config, get_config
 from .serialized_config import SerializedConfig
 from .psql import PSQLPool
+from .dbinit import DBInit
 from .redis import RedisPool
 from typing import Optional
 
@@ -19,10 +20,12 @@ def read_config(settings: Settings) -> Config:
 def make_app(settings: Settings) -> FastAPI:
     app = FastAPI()
     app.include_router(view_router)
-    get_config.setup(app, read_config(settings))
+    config = read_config(settings)
+    get_config.setup(app, config)
     get_settings.setup(app, settings)
-    PSQLPool.setup(app, settings.psql_settings())
     RedisPool.setup(app, settings.redis_url)
+    psql_pool = PSQLPool.setup(app, settings.psql_settings())
+    DBInit.setup(app, config, psql_pool)
     return app
 
 

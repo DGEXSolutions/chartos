@@ -13,17 +13,22 @@ def find_dependables(attrs):
             yield name, attr
 
 
-def make_fake_dependable(class_name, dependable_name, dependable):
-    async def _fake_dependable():
+def make_async_stub(class_name, method_name):
+    async def _async_stub():
         raise RuntimeError(
             f"Process {class_name} wasn't initialized, "
-            f"thus {class_name}.{dependable_name} isn't usable. "
+            f"thus {class_name}.{method_name} isn't usable. "
             f"Please call {class_name}.setup(app, ...) before starting the app"
         )
-    _fake_dependable.__name__ = dependable.__name__
-    _fake_dependable.__qualname__ = dependable.__qualname__
-    _fake_dependable.real_dependable = dependable
-    return _fake_dependable
+    return _async_stub
+
+
+def make_fake_dependable(class_name, dependable_name, dependable):
+    stub = make_async_stub(class_name, dependable_name)
+    stub.__name__ = dependable.__name__
+    stub.__qualname__ = dependable.__qualname__
+    stub.real_dependable = dependable
+    return stub
 
 
 class AsyncProcessMetaclass(type):
@@ -100,10 +105,13 @@ class AsyncProcess(metaclass=AsyncProcessMetaclass, inhibit_metaclass=True):
         process = cls(*args, **kwargs)
         app.on_event("startup")(process.on_startup)
         app.on_event("shutdown")(process.on_shutdown)
+        app.dependency_overrides[cls.get_process] = lambda: process
+
         for fake_dependable in cls._fake_dependables:
             dependable_name = fake_dependable.__name__
             instance_dependable = getattr(process, dependable_name)
             app.dependency_overrides[fake_dependable] = instance_dependable
+        return process
 
     async def on_startup(self):
         """A hook which runs when the app starts up"""
@@ -112,3 +120,7 @@ class AsyncProcess(metaclass=AsyncProcessMetaclass, inhibit_metaclass=True):
     async def on_shutdown(self):
         """A hook which runs when the app shuts down"""
         raise NotImplementedError
+
+    @classmethod
+    def get_process(cls, app: FastAPI):
+        return app.dependency_overrides[cls.get_process]()

@@ -33,6 +33,15 @@ class Field:
             TypeParser.parse_str(raw_config.type),
         )
 
+    def pg_name(self) -> str:
+        return f'"{self.name}"'
+
+    def pg_type(self) -> str:
+        return self.type.pg_type()
+
+    def pg_signature(self):
+        return f"{self.pg_name()} {self.pg_type()}"
+
 
 @dataclass
 class View:
@@ -74,6 +83,9 @@ class Layer:
     views: Dict[str, View]
     description: Optional[str] = None
     attribution: Optional[str] = None
+
+    def pg_table_name(self):
+        return self.name
 
     @staticmethod
     def parse(raw_config: SerializedLayer) -> "Layer":

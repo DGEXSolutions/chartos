@@ -14,7 +14,10 @@ class PSQLPool(AsyncProcess):
     async def on_shutdown(self):
         await self.pool.close()
 
+    def acquire(self):
+        return self.pool.acquire()
+
     @process_dependable
     async def get(self) -> asyncpg.Connection:
-        async with self.pool.acquire() as con:
+        async with self.acquire() as con:
             yield con
