@@ -7,6 +7,8 @@ from .settings import Settings, get_settings
 from .psql import PSQLPool
 from .redis import RedisPool
 from fastapi.responses import Response
+
+
 router = APIRouter()
 
 
@@ -76,7 +78,6 @@ async def mvt_view_tile(
         view_slug: str,
         z: int, x: int, y: int,
         config: Config = Depends(get_config),
-        settings: Settings = Depends(get_settings),
         psql=Depends(PSQLPool.get),
         redis=Depends(RedisPool.get),
 ):
