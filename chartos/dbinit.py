@@ -37,8 +37,11 @@ class DBInit(AsyncProcess):
 
     async def on_startup(self):
         async with self.psql_pool.acquire() as conn:
-            for layer in self.config.layers.values():
-                init_layer(conn, layer)
+            try:
+                for layer in self.config.layers.values():
+                    init_layer(conn, layer)
+            finally:
+                await conn.reload_schema_state()
 
     async def on_shutdown(self):
         pass
