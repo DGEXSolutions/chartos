@@ -9,9 +9,11 @@
     {
       # Nixpkgs overlay providing the application
       overlay = nixpkgs.lib.composeManyExtensions [
+        # the poetry2nix overlay provides mkPoetryApplication and friends
         poetry2nix.overlay
+        # our overlay provides chartos, and has access to poetry2nix tooling,
+        # thanks to composeManyExtensions
         (final: prev: {
-          # The application
           chartos = prev.poetry2nix.mkPoetryApplication {
             projectDir = ./.;
           };
@@ -28,11 +30,17 @@
         apps = {
           chartos = pkgs.chartos;
         };
+        defaultApp = apps.chartos;
 
         devShell = pkgs.mkShell {
-          packages = [ pkgs.poetry ];
-          inputsFrom = [ pkgs.chartos ];
+          packages = [
+            (pkgs.poetry2nix.mkPoetryEnv {
+              projectDir = ./.;
+              editablePackageSources = {
+                chartos = ./chartos;
+              };
+            })
+          ];
         };
-        defaultApp = apps.chartos;
       }));
 }
