@@ -7,6 +7,7 @@ from .settings import Settings, get_settings
 from .psql import PSQLPool
 from .redis import RedisPool
 from fastapi.responses import Response
+from .layer_cache import get_cache_location
 
 
 router = APIRouter()
@@ -30,7 +31,7 @@ async def info(config: Config = Depends(get_config)):
                 {
                     "name": layer.name,
                     "description": layer.description,
-                    "versioned": layer.versioned,
+                    "versioned": True,
                     "views": list(layer.views.keys()),
                 }
                 for layer in config.layers.values()
@@ -39,7 +40,7 @@ async def info(config: Config = Depends(get_config)):
     }
 
 
-@router.get("/layer/{layer_slug}/mvt/{view_slug}")
+@router.get("/layer/{layer_slug}/mvt/{view_slug}/")
 async def mvt_view_metadata(
         layer_slug: str,
         view_slug: str,
@@ -49,7 +50,7 @@ async def mvt_view_metadata(
     layer = config.layers[layer_slug]
     view = layer.views[view_slug]
     tiles_url_pattern = (
-        f"{settings.protocol}://{settings.root_url}"
+        f"{settings.root_url}"
         f"/tile/{layer_slug}/{view_slug}"
         "/{z}/{x}/{y}/"
     )
@@ -76,6 +77,7 @@ class ProtobufResponse(Response):
 async def mvt_view_tile(
         layer_slug: str,
         view_slug: str,
+        version: str,
         z: int, x: int, y: int,
         config: Config = Depends(get_config),
         psql=Depends(PSQLPool.get),
@@ -85,22 +87,20 @@ async def mvt_view_tile(
     view = layer.views[view_slug]
 
     # try to fetch the tile from the cache
-    cache_key = f'{view.get_cache_location()}.tile/{z}/{x}/{y}'
+    cache_key = f'{get_cache_location(layer, view, version)}.tile/{z}/{x}/{y}'
     tile_data = await redis.get(cache_key)
     if tile_data is not None:
         return tile_data
 
-    # if the key isn't found, compute build the tile
+    # if the key isn't found, build the tile
     tile_data = await mvt_query(psql, layer, view, z, x, y)
-    if tile_data is None:
-        raise HTTPException(status_code=404, detail='no tile found')
 
     # store the tile in the cache
-    await redis.set(cache_key, tile_data, expire=view.cache_duration)
+    await redis.set(cache_key, tile_data, ex=view.cache_duration)
     return tile_data
 
 
-async def mvt_query(psql, layer, view, z, x, y):
+async def mvt_query(psql, layer, view, z, x, y) -> bytes:
     view_field_names = ", ".join(field.pg_name() for field in view.fields)
     on_field_name = view.on_field.pg_name()
     mvt_layer_name = f"'{layer.name}'"
@@ -122,8 +122,9 @@ async def mvt_query(psql, layer, view, z, x, y):
         # prepare the bbox of the tile for use in the tile content subquery
         "WITH bbox AS (SELECT TileBBox($1, $2, $3, 3857) AS geom), "
         # find all objects in the tile
-        f"tile_content AS ({tile_content_subquery}"
+        f"tile_content AS ({tile_content_subquery}) "
         # package those inside an MVT tile
         f"SELECT ST_AsMVT(tile_content, {mvt_layer_name}) FROM tile_content"
     )
-    return await psql.execute(query, z, x, y)
+    (record,) = await psql.fetch(query, z, x, y)
+    return record.get("st_asmvt")

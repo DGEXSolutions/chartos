@@ -19,7 +19,7 @@ class FieldType(ABC):
         raise NotImplementedError
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class Field:
     name: str
     description: str
@@ -27,17 +27,19 @@ class Field:
 
     @staticmethod
     def parse(raw_config: SerializedField) -> "Field":
+        field_type = TypeParser.parse_str(raw_config.type)
+        assert isinstance(field_type, FieldType)
         return Field(
             raw_config.name,
             raw_config.description,
-            TypeParser.parse_str(raw_config.type),
+            field_type,
         )
 
     def pg_name(self) -> str:
         return f'"{self.name}"'
 
     def pg_type(self) -> str:
-        return self.type.pg_type()
+        return self.type.pg_type
 
     def pg_signature(self):
         return f"{self.pg_name()} {self.pg_type()}"
@@ -77,7 +79,6 @@ class View:
 @dataclass
 class Layer:
     name: str
-    versioned: bool
     id_field: Field
     fields: Dict[str, Field]
     views: Dict[str, View]
@@ -96,7 +97,6 @@ class Layer:
         id_field = fields[raw_config.id_field_name]
         return Layer(
             raw_config.name,
-            raw_config.versioned,
             id_field,
             fields,
             views,
@@ -121,37 +121,37 @@ class Config:
         )
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class TextField(FieldType):
     pg_type = "varchar"
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class JsonField(FieldType):
     pg_type = "jsonb"
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class IntField(FieldType):
     pg_type = "integer"
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class BoolField(FieldType):
     pg_type = "boolean"
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class BigIntField(FieldType):
     pg_type = "bigint"
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class DoubleField(FieldType):
     pg_type = "double precision"
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class StringField(FieldType):
     max_len: Optional[int] = None
 
@@ -162,7 +162,7 @@ class StringField(FieldType):
         return f"varchar({self.max_len})"
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class CharField(FieldType):
     max_len: Optional[int] = None
 
@@ -176,7 +176,7 @@ class CharField(FieldType):
         return f"char({self.max_len})"
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class ArrayField(FieldType):
     of: Optional[FieldType] = None
 
@@ -189,12 +189,12 @@ class ArrayField(FieldType):
         assert self.of is not None
         return f"{self.of.pg_type}[]"
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class GeomField(FieldType):
     pg_type = "geometry(Geometry, 3857)"
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class TimestampField(FieldType):
     pg_type = 'timestamp with time zone'
 

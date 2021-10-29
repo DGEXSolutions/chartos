@@ -10,7 +10,6 @@ class Settings(BaseSettings):
     max_zoom: int = 18
 
     # those are needed to build mvt layer metadata
-    protocol: str
     root_url: str
 
     # postgres://user:password@host:port/database?option=value
