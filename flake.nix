@@ -6,27 +6,26 @@
   inputs.poetry2nix.url = "github:nix-community/poetry2nix";
 
   outputs = { self, nixpkgs, flake-utils, poetry2nix }:
-    {
-      # Nixpkgs overlay providing the application
-      overlay = nixpkgs.lib.composeManyExtensions [
-        # the poetry2nix overlay provides mkPoetryApplication and friends
-        poetry2nix.overlay
-        # our overlay provides chartos, and has access to poetry2nix tooling,
-        # thanks to composeManyExtensions
-        (final: prev: {
-          chartos = prev.poetry2nix.mkPoetryApplication {
-            projectDir = ./.;
-          };
-        })
-      ];
-    } // (flake-utils.lib.eachDefaultSystem (system:
+    (flake-utils.lib.eachDefaultSystem (system:
       let
+        overlay = nixpkgs.lib.composeManyExtensions [
+          # the poetry2nix overlay provides mkPoetryApplication and friends
+          poetry2nix.overlay
+          # our overlay provides chartos, and has access to poetry2nix tooling,
+          # thanks to composeManyExtensions
+          (final: prev: {
+            chartos = prev.poetry2nix.mkPoetryApplication {
+              projectDir = ./.;
+            };
+          })
+        ];
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [ self.overlay ];
+          overlays = [ overlay ];
         };
       in
       rec {
+        inherit overlay;
         apps = {
           chartos = pkgs.chartos;
         };
@@ -39,6 +38,15 @@
               editablePackageSources = {
                 chartos = ./chartos;
               };
+              overrides = pkgs.poetry2nix.overrides.withDefaults (
+                self: super: {
+                  pyproj = super.pyproj.overrideAttrs (
+                    old: {
+                      inherit (pkgs.python3.pkgs.pyproj) patches;
+                    }
+                  );
+                }
+              );
             })
           ];
         };

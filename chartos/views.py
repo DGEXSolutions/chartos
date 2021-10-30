@@ -1,3 +1,4 @@
+
 from typing import Dict, List
 from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,7 +8,7 @@ from .settings import Settings, get_settings
 from .psql import PSQLPool
 from .redis import RedisPool
 from fastapi.responses import Response
-from .layer_cache import get_cache_location
+from .layer_cache import get_view_cache_prefix, get_cache_tile_key, AffectedTile
 
 
 router = APIRouter()
@@ -87,7 +88,8 @@ async def mvt_view_tile(
     view = layer.views[view_slug]
 
     # try to fetch the tile from the cache
-    cache_key = f'{get_cache_location(layer, view, version)}.tile/{z}/{x}/{y}'
+    view_cache_prefix = get_view_cache_prefix(layer, version, view)
+    cache_key = get_cache_tile_key(view_cache_prefix, AffectedTile(x, y, z))
     tile_data = await redis.get(cache_key)
     if tile_data is not None:
         return tile_data
@@ -97,7 +99,7 @@ async def mvt_view_tile(
 
     # store the tile in the cache
     await redis.set(cache_key, tile_data, ex=view.cache_duration)
-    return tile_data
+    return ProtobufResponse(tile_data)
 
 
 async def mvt_query(psql, layer, view, z, x, y) -> bytes:
@@ -126,5 +128,6 @@ async def mvt_query(psql, layer, view, z, x, y) -> bytes:
         # package those inside an MVT tile
         f"SELECT ST_AsMVT(tile_content, {mvt_layer_name}) FROM tile_content"
     )
+    print(query)
     (record,) = await psql.fetch(query, z, x, y)
     return record.get("st_asmvt")

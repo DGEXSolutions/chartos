@@ -35,17 +35,15 @@ async def init_layer(conn, layer: Layer):
     table_name = layer.pg_table_name()
 
     # create the table if it doesn't exist
-    fields_sig = ', '.join(field.pg_signature() for field in layer.fields.values())
-    query = f"CREATE TABLE IF NOT EXISTS {table_name} ({fields_sig});"
+    query = f"CREATE TABLE IF NOT EXISTS {table_name} {layer.pg_table_sig()};"
     await conn.execute(query)
 
     # add the missing columns
-    version_col = "ADD COLUMN IF NOT EXISTS version varchar"
-    user_cols = ", ".join(
-        f"ADD COLUMN IF NOT EXISTS {field.pg_signature()}"
-        for field in layer.fields.values()
+    cols = ", ".join(
+        f"ADD COLUMN IF NOT EXISTS {pg_name} {pg_type}"
+        for _, pg_name, pg_type in layer.pg_schema()
     )
-    await conn.execute(f"ALTER TABLE {table_name} {version_col}, {user_cols};")
+    await conn.execute(f"ALTER TABLE {table_name} {cols};")
 
     # add indexes on geographic fields used in views
     geo_fields = {view.on_field for view in layer.views.values()}

@@ -2,11 +2,13 @@ import yaml
 import string
 import typing
 from abc import ABC, abstractmethod
-from typing import Optional, List, Iterator, TypeVar, Dict, Type, Literal, Union, ClassVar
+from typing import Optional, List, Iterator, TypeVar, Dict, Type, Literal, Union, ClassVar, Generator, Tuple
 from enum import IntEnum, auto
 from dataclasses import dataclass, field
 from chartos.utils import PeekableIterator, ValueDependable
 from chartos.serialized_config import SerializedConfig, SerializedLayer, SerializedView, SerializedField
+from collections import defaultdict
+from shapely.geometry import shape
 
 
 get_config = ValueDependable("get_config")
@@ -41,8 +43,10 @@ class Field:
     def pg_type(self) -> str:
         return self.type.pg_type
 
-    def pg_signature(self):
-        return f"{self.pg_name()} {self.pg_type()}"
+    def from_json(self, json_data):
+        if not isinstance(self.type, GeomField):
+            return json_data
+        return shape(json_data)
 
 
 @dataclass
@@ -103,6 +107,36 @@ class Layer:
             description=raw_config.description,
             attribution=raw_config.attribution,
         )
+
+    def pg_schema(self):
+        yield None, "version", "varchar"
+        for layer_field in self.fields.values():
+            yield layer_field, layer_field.pg_name(), layer_field.pg_type()
+
+    def get_pg_field_index(self, field):
+        for i, layer_field in enumerate(self.fields.values()):
+            if layer_field is field:
+                return i + 1
+        raise RuntimeError("field not found")
+
+    def pg_field_names(self):
+        for _, field_name, _ in self.pg_schema():
+            yield field_name
+
+    def pg_table_sig(self) -> str:
+        fields_sig = ', '.join(
+            f"{pg_name} {pg_type}"
+            for _, pg_name, pg_type
+            in self.pg_schema()
+        )
+        return f"({fields_sig})"
+
+    def get_viewed_fields(self) -> Dict[Field, View]:
+        indexed_geo_fields: Dict[Field, View] = defaultdict(list)
+        for view in self.views.values():
+            indexed_geo_fields[view.on_field].append(view)
+        return indexed_geo_fields
+
 
 
 @dataclass

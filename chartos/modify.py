@@ -1,17 +1,17 @@
 from dataclasses import dataclass
 from collections import defaultdict
 from functools import reduce
-from typing import Tuple, Set, List, Optional, Dict
-from fastapi import APIRouter, Depends, HTTPException
-from .config import Config, get_config, Layer
+from typing import Tuple, Set, List, Optional, Dict, Iterable
+from fastapi import APIRouter, Depends, HTTPException, Body, Query
+from .config import Config, get_config, Layer, Field, View
 from .settings import Settings, get_settings
 from .psql import PSQLPool
 from .redis import RedisPool
 from fastapi.responses import Response
 from enum import Enum
 from typing import List, Dict, Any
-from .layer_cache import invalidate_cache, invalidate_full_layer_cache, add_affected_tiles, AffectedTile
-
+from .layer_cache import invalidate_cache, invalidate_full_layer_cache, find_affected_tiles, AffectedTile
+from shapely.geometry.base import BaseGeometry
 # from chartis.utils.encoder import DecimalEncoder
 # from chartis.utils.parse import GeoJSONParser
 
@@ -149,7 +149,7 @@ def validate_payload(layer: Layer, payload: List[Dict[str, Any]], change_type: C
                 })
 
 
-@router.post('/push/{layer_slug}/{change_type}/')
+# @router.post('/push/{layer_slug}/{change_type}/')
 async def push(
         layer_slug: str,
         change_type: ChangeType,
@@ -200,3 +200,49 @@ async def push(
         export_impacted_tiles[view_name] = [{'z': z, 'x': x, 'y': y} for x, y, z in tiles]
 
     return Response({'impacted_tiles': export_impacted_tiles}, status=201)
+
+
+
+@router.post('/push/{layer_slug}/insert/')
+async def insert(
+        layer_slug: str,
+        version: str = Query(...),
+        payload: List[Dict[str, Any]] = Body(...),
+        config: Config = Depends(get_config),
+        settings: Settings = Depends(get_settings),
+        psql=Depends(PSQLPool.get),
+        redis=Depends(RedisPool.get),
+):
+    layer = config.layers[layer_slug]
+    validate_payload(layer, payload, "insert")
+
+    # get which fields are indexed by views
+    viewed_fields: Dict[Field, View] = layer.get_viewed_fields()
+    affected_tiles: Dict[Field, Set[AffectedTile]] = defaultdict(set)
+
+    def build_pg_record(json_record):
+        """Takes user provided json and converts it to a record"""
+        yield version
+        for layer_field in layer.fields.values():
+            # get the field from the user provided data
+            json_field = json_record.get(layer_field.name)
+            if json_field is None:
+                yield None
+                continue
+            # convert it for insertion in the database
+            field_data = layer_field.from_json(json_field)
+            # if this field has an impact on views, find affected tiles
+            if layer_field in viewed_fields:
+                affected_tiles[layer_field].update(
+                    find_affected_tiles(settings.max_zoom, field_data))
+            yield field_data
+
+    records = [tuple(build_pg_record(data)) for data in payload]
+    field_names = list(layer.pg_field_names())
+    field_placeholder = ", ".join(f"${i + 1}" for i in range(len(field_names)))
+    query = (
+        f"insert into {layer.pg_table_name()} ({', '.join(field_names)}) "
+        f"values ({field_placeholder})"
+    )
+    await psql.executemany(query, records)
+    await invalidate_cache(redis, layer, version, affected_tiles)

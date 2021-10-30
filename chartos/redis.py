@@ -15,10 +15,13 @@ class RedisPool(AsyncProcess):
     async def on_shutdown(self):
         await self.pool.disconnect()
 
+    def acquire(self):
+        return Redis(
+            connection_pool=self.pool,
+            single_connection_client=True
+        )
+
     @process_dependable
     async def get(self) -> Redis:
-        async with Redis(
-                connection_pool=self.pool,
-                single_connection_client=True
-        ) as conn:
+        async with self.acquire() as conn:
             yield conn

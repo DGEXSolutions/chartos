@@ -14,6 +14,7 @@ from .views import router as view_router
 from .truncate import router as truncate_router
 from .modify import router as modify_router
 
+
 def read_config(settings: Settings) -> Config:
     with open(settings.config_path) as f:
         config_data = yaml.safe_load(f)
@@ -25,7 +26,7 @@ def encode_geometry(geometry):
     if not hasattr(geometry, '__geo_interface__'):
         raise TypeError('{g} does not conform to '
                         'the geo interface'.format(g=geometry))
-    shape = shapely.geometry.asShape(geometry)
+    shape = shapely.geometry.shape(geometry)
     return shapely.wkb.dumps(shape)
 
 

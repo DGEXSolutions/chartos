@@ -41,7 +41,10 @@ class AsyncProcessMetaclass(type):
             if method_name not in attrs:
                 raise TypeError(f"{name} must implement {method_name}")
 
-        fake_attrs = {"setup": real_class.setup}
+        fake_attrs = {
+            "setup": real_class.setup,
+            "get_process": real_class.get_process,
+        }
         fake_dependables = []
         for dep_name, dep in find_dependables(attrs):
             fake_dependable = make_fake_dependable(name, dep_name, dep)

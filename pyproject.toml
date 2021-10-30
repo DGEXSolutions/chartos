@@ -11,7 +11,11 @@ fastapi = "^0"
 aioredis = "^2"
 asyncpg = { version = "^0" }
 uvicorn = { version = "^0", extras = ["standard"] }
+
+# shapes and stuff
 shapely = "^1"
+pyproj = "^3"  # CRS transformations
+
 
 # production
 gunicorn = {version = "20.1.0", optional = true}
