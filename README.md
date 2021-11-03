@@ -1,3 +1,5 @@
+[![Build](https://github.com/DGEXSolutions/chartos/actions/workflows/docker.yml/badge.svg)](https://github.com/DGEXSolutions/chartos/actions/workflows/docker.yml)
+
 # Usage
 
 ```sh
