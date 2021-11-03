@@ -1,7 +1,6 @@
-
 from typing import Dict, List
 from collections import defaultdict
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from dataclasses import asdict as dataclass_as_dict
 from .config import Config, get_config
 from .settings import Settings, get_settings
@@ -9,6 +8,7 @@ from .psql import PSQLPool
 from .redis import RedisPool
 from fastapi.responses import Response
 from .layer_cache import get_view_cache_prefix, get_cache_tile_key, AffectedTile
+from urllib.parse import quote as url_quote
 
 
 router = APIRouter()
@@ -45,6 +45,7 @@ async def info(config: Config = Depends(get_config)):
 async def mvt_view_metadata(
         layer_slug: str,
         view_slug: str,
+        version: str = Query(...),
         config: Config = Depends(get_config),
         settings: Settings = Depends(get_settings),
 ):
@@ -54,6 +55,7 @@ async def mvt_view_metadata(
         f"{settings.root_url}"
         f"/tile/{layer_slug}/{view_slug}"
         "/{z}/{x}/{y}/"
+        f"?version={url_quote(version)}"
     )
     return {
         'type': 'vector',
