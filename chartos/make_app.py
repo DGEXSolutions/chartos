@@ -1,3 +1,4 @@
+import json
 import yaml
 import asyncpg
 import shapely.wkb
@@ -37,6 +38,12 @@ async def init_psql_conn(conn: asyncpg.Connection):
         encoder=encode_geometry,
         decoder=shapely.wkb.loads,
         format='binary',
+    )
+    await conn.set_type_codec(
+        'jsonb',
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema='pg_catalog'
     )
 
 

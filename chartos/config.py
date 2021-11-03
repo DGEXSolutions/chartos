@@ -44,9 +44,9 @@ class Field:
         return self.type.pg_type
 
     def from_json(self, json_data):
-        if not isinstance(self.type, GeomField):
-            return json_data
-        return shape(json_data)
+        if isinstance(self.type, GeomField):
+            return shape(json_data)
+        return json_data
 
 
 @dataclass

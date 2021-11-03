@@ -19,7 +19,7 @@ async def test_insert(client):
     assert response.read() == b""
 
     insert_payload = [
-        {"entity_id": 1, "geom_geo": test_geom, "geom_sch": test_geom}
+        {"entity_id": 1, "geom_geo": test_geom, "geom_sch": test_geom, "components": {"test": 42.14159}}
     ]
     response = await client.post(
         "/push/osrd_track_section/insert/?version=test",
