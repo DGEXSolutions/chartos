@@ -7,6 +7,7 @@ from shapely.geometry import Polygon
 from shapely.ops import transform
 from shapely.prepared import prep
 from .config import View, Layer, Field
+from fastapi.responses import JSONResponse
 
 
 def get_layer_cache_prefix(layer, version):
@@ -30,7 +31,6 @@ class AffectedTile:
 
 def get_cache_tile_key(view_prefix: str, tile: AffectedTile):
     return f"{view_prefix}.tile/{tile.z}/{tile.x}/{tile.y}"
-
 
 
 def get_xy(lat: float, lon: float, zoom: int) -> Tuple[int, int]:
@@ -98,15 +98,22 @@ async def invalidate_cache(
     if not affected_tiles:
         return
 
+    impacted_tiles_meta = {}
+
     def build_evicted_keys() -> Iterable[str]:
         for view in layer.views.values():
             view_affected_tiles = affected_tiles.get(view.on_field)
             if view_affected_tiles is None:
                 continue
+            impacted_tiles_meta[view.name] = [tile.to_json() for tile in view_affected_tiles]
             cache_location = get_view_cache_prefix(layer, version, view)
             for tile in view_affected_tiles:
                 yield get_cache_tile_key(cache_location, tile)
     await redis.delete(*build_evicted_keys())
+    return JSONResponse(
+        {"impacted_tiles": impacted_tiles_meta},
+        status_code=201,
+    )
 
 
 async def invalidate_full_layer_cache(redis, layer: Layer, version: str):

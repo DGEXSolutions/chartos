@@ -88,4 +88,4 @@ async def insert(
         f"values ({field_placeholder})"
     )
     await psql.executemany(query, records)
-    await invalidate_cache(redis, layer, version, affected_tiles)
+    return await invalidate_cache(redis, layer, version, affected_tiles)

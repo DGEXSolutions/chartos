@@ -26,7 +26,7 @@ async def test_insert(client):
         json=insert_payload
     )
     print(response.read())
-    assert response.status_code == 200
+    assert response.status_code == 201
 
     response = await get_tile(client, 14, 8299, 5632)
     single_item_tile = response.read()
