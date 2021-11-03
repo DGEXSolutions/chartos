@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseSettings
 from functools import lru_cache
 from chartos.utils import ValueDependable
@@ -6,6 +6,7 @@ from chartos.utils import ValueDependable
 
 class Settings(BaseSettings):
     config_path: str = "examples/layer.yml"
+    allowed_origins: List[str] = ["*"]
 
     max_zoom: int = 18
 

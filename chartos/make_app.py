@@ -2,6 +2,7 @@ import yaml
 import asyncpg
 import shapely.wkb
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from .settings import Settings, get_settings, get_env_settings
 from .config import Config, get_config
 from .serialized_config import SerializedConfig
@@ -47,6 +48,14 @@ def make_app(settings: Optional[Settings] = None) -> FastAPI:
     app.include_router(view_router)
     app.include_router(truncate_router)
     app.include_router(modify_router)
+
+    # setup CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.allowed_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     # parse the configuration and setup dep injection
     config = read_config(settings)
