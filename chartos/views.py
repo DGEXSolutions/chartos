@@ -97,14 +97,14 @@ async def mvt_view_tile(
         return ProtobufResponse(tile_data)
 
     # if the key isn't found, build the tile
-    tile_data = await mvt_query(psql, layer, view, z, x, y)
+    tile_data = await mvt_query(psql, layer, version, view, z, x, y)
 
     # store the tile in the cache
     await redis.set(cache_key, tile_data, ex=view.cache_duration)
     return ProtobufResponse(tile_data)
 
 
-async def mvt_query(psql, layer, view, z, x, y) -> bytes:
+async def mvt_query(psql, layer, version, view, z, x, y) -> bytes:
     view_field_names = ", ".join(field.pg_name() for field in view.fields)
     on_field_name = view.on_field.pg_name()
     mvt_layer_name = f"'{layer.name}'"
@@ -117,8 +117,10 @@ async def mvt_query(psql, layer, view, z, x, y) -> bytes:
         # read from the table corresponding to the layer, as well as the bbox
         # the bbox table is built by the WITH clause of the top-level query
         f"FROM {layer.pg_table_name()}, bbox "
+        # filter by version
+        "WHERE version = $4 "
         # we only want objects which are inside the tile BBox
-        f"WHERE {on_field_name} && bbox.geom "
+        f"AND {on_field_name} && bbox.geom "
         # exclude geometry collections
         f"AND ST_GeometryType({on_field_name}) != 'ST_GeometryCollection'"
     )
@@ -130,6 +132,5 @@ async def mvt_query(psql, layer, view, z, x, y) -> bytes:
         # package those inside an MVT tile
         f"SELECT ST_AsMVT(tile_content, {mvt_layer_name}) FROM tile_content"
     )
-    print(query)
-    (record,) = await psql.fetch(query, z, x, y)
+    (record,) = await psql.fetch(query, z, x, y, version)
     return record.get("st_asmvt")
