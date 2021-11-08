@@ -94,7 +94,7 @@ async def mvt_view_tile(
     cache_key = get_cache_tile_key(view_cache_prefix, AffectedTile(x, y, z))
     tile_data = await redis.get(cache_key)
     if tile_data is not None:
-        return tile_data
+        return ProtobufResponse(tile_data)
 
     # if the key isn't found, build the tile
     tile_data = await mvt_query(psql, layer, view, z, x, y)
