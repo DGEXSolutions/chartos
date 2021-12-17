@@ -1,10 +1,7 @@
-import pyproj
-
 from typing import Set, Tuple, Optional, Iterator, Collection, Dict, Iterable
 from math import floor, pi, tan, atan, sinh, degrees, radians, asinh
 from dataclasses import dataclass
 from shapely.geometry import Polygon
-from shapely.ops import transform
 from shapely.prepared import prep
 from .config import View, Layer, Field
 from fastapi.responses import JSONResponse
@@ -74,18 +71,10 @@ def find_prepared_affected_tiles(
             )
 
 
-pseudo_mercator = pyproj.CRS('EPSG:3857')
-gps = pyproj.CRS('EPSG:4326')
-pseudo_mercator_to_gps = pyproj.Transformer.from_crs(
-    pseudo_mercator, gps, always_xy=True).transform
-
 
 def find_affected_tiles(max_zoom, geom) -> Iterator[AffectedTile]:
-    # chartos works with pseudo mercator everywhere,
-    # and eventhough mapbox works with the same projection,
-    # the algorithm which finds tiles takes GPS coordinates
-    proj_geom = transform(pseudo_mercator_to_gps, geom)
-    prepared_geom = prep(proj_geom)
+    """geom must be a 4326 (GPS) geometry"""
+    prepared_geom = prep(geom)
     return find_prepared_affected_tiles(max_zoom, prepared_geom, 0, 0, 0)
 
 

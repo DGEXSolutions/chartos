@@ -37,6 +37,11 @@ class Field:
             field_type,
         )
 
+    def pg_view_select(self) -> str:
+        if not isinstance(self.type, GeomField):
+            return self.pg_name()
+        return f"ST_Transform({self.pg_name()}, 4326) AS {self.pg_name()}"
+
     def pg_name(self) -> str:
         return f'"{self.name}"'
 

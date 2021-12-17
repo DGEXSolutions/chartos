@@ -3,12 +3,6 @@ from shapely.geometry import shape
 from shapely.ops import transform
 
 
-pseudo_mercator = pyproj.CRS('EPSG:3857')
-gps = pyproj.CRS('EPSG:4326')
-gps_to_pseudo_mercator = pyproj.Transformer.from_crs(
-    gps, pseudo_mercator, always_xy=True).transform
-
-
 campus_sncf_gps = shape({
     "type": "Point",
     "coordinates": [
@@ -16,11 +10,6 @@ campus_sncf_gps = shape({
         48.9210857797314
     ]
 })
-
-campus_sncf_mercator = transform(
-    gps_to_pseudo_mercator,
-    campus_sncf_gps
-)
 
 ref_tiles = {
     (132786, 90113, 18),

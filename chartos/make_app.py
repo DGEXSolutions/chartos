@@ -2,16 +2,18 @@ import json
 import yaml
 import asyncpg
 import shapely.wkb
+import pyproj
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from shapely.ops import transform
+from typing import Optional
+
 from .settings import Settings, get_settings, get_env_settings
 from .config import Config, get_config
 from .serialized_config import SerializedConfig
 from .psql import PSQLPool
 from .dbinit import DBInit
 from .redis import RedisPool
-from typing import Optional
-
 from .views import router as view_router
 from .truncate import router as truncate_router
 from .modify import router as modify_router
@@ -24,19 +26,32 @@ def read_config(settings: Settings) -> Config:
         return Config.parse(raw_config)
 
 
+pseudo_mercator = pyproj.CRS('EPSG:3857')
+gps = pyproj.CRS('EPSG:4326')
+
+pseudo_mercator_to_gps = pyproj.Transformer.from_crs(
+    pseudo_mercator, gps, always_xy=True).transform
+
+gps_to_pseudo_mercator = pyproj.Transformer.from_crs(
+    gps, pseudo_mercator, always_xy=True).transform
+
+
 def encode_geometry(geometry):
-    if not hasattr(geometry, '__geo_interface__'):
-        raise TypeError('{g} does not conform to '
-                        'the geo interface'.format(g=geometry))
-    shape = shapely.geometry.shape(geometry)
-    return shapely.wkb.dumps(shape)
+    geom = shapely.geometry.shape(geometry)
+    geom = transform(gps_to_pseudo_mercator, geom)
+    return shapely.wkb.dumps(geom)
+
+
+def decode_geometry(data):
+    geom = shapely.wkb.loads(data)
+    return transform(pseudo_mercator_to_gps, geom)
 
 
 async def init_psql_conn(conn: asyncpg.Connection):
     await conn.set_type_codec(
         'geometry',  # also works for 'geography'
         encoder=encode_geometry,
-        decoder=shapely.wkb.loads,
+        decoder=decode_geometry,
         format='binary',
     )
     await conn.set_type_codec(

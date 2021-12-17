@@ -106,14 +106,19 @@ async def mvt_view_tile(
 
 async def mvt_query(psql, layer, version, view, z, x, y) -> bytes:
     view_field_names = ", ".join(field.pg_name() for field in view.fields)
+    view_field_names = ", ".join(
+        field.pg_view_select()
+        for field in view.fields
+    )
     on_field_name = view.on_field.pg_name()
     mvt_layer_name = f"'{layer.name}'"
     tile_content_subquery = (
         "SELECT "
+        # the geometry the view is based on, converted to MVT. this field must
+        # come first for ST_AsMVT to index the tile on the correct geometry
+        f"ST_AsMVTGeom({on_field_name}, bbox.geom, 4096, 64) AS MVTGeom, "
         # select all the fields the user requested
-        f"{view_field_names}, "
-        # along with the geometry the view is based on, converted to MVT
-        f"ST_AsMVTGeom({on_field_name}, bbox.geom, 4096, 64, true) AS MVTGeom "
+        f"{view_field_names} "
         # read from the table corresponding to the layer, as well as the bbox
         # the bbox table is built by the WITH clause of the top-level query
         f"FROM {layer.pg_table_name()}, bbox "

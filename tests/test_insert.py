@@ -1,7 +1,7 @@
 import pytest
 import shapely.geometry
 
-from .test_data import campus_sncf_mercator
+from .test_data import campus_sncf_gps
 
 
 class MVTClient:
@@ -41,7 +41,7 @@ class MVTClient:
 
 @pytest.mark.asyncio
 async def test_insert(client):
-    test_geom = shapely.geometry.mapping(campus_sncf_mercator)
+    test_geom = shapely.geometry.mapping(campus_sncf_gps)
 
     mvt_client = await MVTClient.init(
         client,
