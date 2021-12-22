@@ -1,10 +1,12 @@
-from typing import Set, Tuple, Optional, Iterator, Collection, Dict, Iterable
-from math import floor, pi, tan, atan, sinh, degrees, radians, asinh
 from dataclasses import dataclass
+from math import asinh, atan, degrees, floor, pi, radians, sinh, tan
+from typing import Collection, Dict, Iterable, Iterator, Optional, Set, Tuple
+
+from fastapi.responses import JSONResponse
 from shapely.geometry import Polygon
 from shapely.prepared import prep
-from .config import View, Layer, Field
-from fastapi.responses import JSONResponse
+
+from .config import Field, Layer, View
 
 
 def get_layer_cache_prefix(layer, version):
@@ -84,9 +86,6 @@ async def invalidate_cache(
         version: str,
         affected_tiles: Dict[Field, Set[AffectedTile]]
 ):
-    if not affected_tiles:
-        return
-
     impacted_tiles_meta = {}
 
     def build_evicted_keys() -> Iterable[str]:
@@ -98,7 +97,9 @@ async def invalidate_cache(
             cache_location = get_view_cache_prefix(layer, version, view)
             for tile in view_affected_tiles:
                 yield get_cache_tile_key(cache_location, tile)
-    await redis.delete(*build_evicted_keys())
+    evicted_keys = list(build_evicted_keys())
+    if evicted_keys:
+        await redis.delete(*evicted_keys)
     return JSONResponse(
         {"impacted_tiles": impacted_tiles_meta},
         status_code=201,
