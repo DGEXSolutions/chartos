@@ -9,7 +9,7 @@ from .layer_cache import invalidate_full_layer_cache
 router = APIRouter()
 
 
-@router.post("push/{layer_slug}/truncate/")
+@router.post("/push/{layer_slug}/truncate/")
 async def truncate(
         layer_slug: str,
         version: str,
