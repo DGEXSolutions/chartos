@@ -2,7 +2,7 @@ from typing import Dict, List
 from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from dataclasses import asdict as dataclass_as_dict
-from .config import Config, get_config
+from .config import Config, Field, GeomField, JsonField, get_config
 from .settings import Settings, get_settings
 from .psql import PSQLPool
 from .redis import RedisPool
@@ -104,12 +104,17 @@ async def mvt_view_tile(
     return ProtobufResponse(tile_data)
 
 
+def select_field(field: Field) -> str:
+    field_name = field.pg_name()
+    if isinstance(field.type, GeomField):
+        return f"ST_Transform({field_name}, 4326) AS {field_name}"
+    if isinstance(field.type, JsonField):
+        return f"{field_name}::text"
+    return field_name
+
+
 async def mvt_query(psql, layer, version, view, z, x, y) -> bytes:
-    view_field_names = ", ".join(field.pg_name() for field in view.fields)
-    view_field_names = ", ".join(
-        field.pg_view_select()
-        for field in view.fields
-    )
+    view_field_names = ", ".join(map(select_field, view.fields))
     on_field_name = view.on_field.pg_name()
     mvt_layer_name = f"'{layer.name}'"
     tile_content_subquery = (
